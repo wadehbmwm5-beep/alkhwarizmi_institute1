@@ -101,6 +101,17 @@ body.edit .tools{display:flex}
 .tools .del{color:#ff9a9a}
 .add{display:none;min-height:300px;border:2px dashed var(--gold);border-radius:26px;background:transparent;color:var(--gold-l);font-size:1.2rem;cursor:pointer;place-items:center}
 body.edit .add{display:grid}
+.pick{display:none;position:absolute;top:14px;inset-inline-start:14px;width:30px;height:30px;border-radius:9px;border:2px solid var(--gold);background:rgba(5,10,31,.7);color:transparent;font-size:1.1rem;line-height:1;cursor:pointer;align-items:center;justify-content:center}
+body.edit .pick{display:flex}
+.pick.on{background:var(--gold);color:#0a1030}
+.card.sel{border-color:var(--gold-l);box-shadow:0 0 0 2px rgba(243,220,143,.45)}
+.bulk{display:none;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;margin:0 auto 24px;padding:12px 16px;max-width:900px;border:1px dashed var(--gold);border-radius:18px;background:rgba(212,175,55,.07)}
+body.edit .bulk.show{display:flex}
+.bulk span{color:var(--gold-l);font-weight:700}
+.bulk button{padding:7px 18px;font-size:.92rem;border-radius:999px;border:1px solid var(--gold);background:transparent;color:var(--gold-l);cursor:pointer}
+.bulk button:hover:not(:disabled){background:rgba(212,175,55,.18)}
+.bulk button.go{background:var(--gold);color:#0a1030;font-weight:700}
+.bulk button:disabled{opacity:.4;cursor:not-allowed}
 .add:hover{background:rgba(212,175,55,.08)}
 .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px}
 
@@ -218,6 +229,7 @@ body.edit .pdel{display:block}
   <input class="search" id="q" type="search" placeholder="ابحث عن أستاذ أو مادة..." aria-label="بحث">
   <div class="currs" id="currs"></div>
   <div class="chips" id="chips"></div>
+  <div class="bulk" id="bulk"></div>
   <div class="grid" id="grid"></div>
 </section>
 
@@ -324,7 +336,7 @@ let T=[],C=[],P=[],V=[],loaded=false;
 const fail=()=>alert('تعذّرت العملية. تأكد من تسجيل الدخول ومن قواعد Firestore.');
 onSnapshot(col,snap=>{T=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order??0)-(b.order??0));loaded=true;render()},
   err=>{console.error(err);loaded=true;$('#grid').innerHTML='<div class="empty">تعذّر تحميل الأساتذة.</div>'});
-let filt='الكل', editId=null, curr=null, vis=[];
+let filt='الكل', editId=null, curr=null, vis=[], sel=new Set();
 const CURR={region:{n:'منهج الإقليم',d:''},center:{n:'منهج المركز',d:' '}};
 
 const ph=t=>t.photo?`<img src="${t.photo}" alt="${esc(t.name)}">`:`<div class="ph">${esc(t.name.replace(/^أ\.\s*/,'').charAt(0))}</div>`;
@@ -343,8 +355,13 @@ function render(){renderInst();
   $('#chips').innerHTML=subs.map(s=>`<button class="chip ${s===filt?'on':''}" data-f="${esc(s)}">${esc(s)}</button>`).join('');
   const list=base.filter(t=>(filt==='الكل'||t.subject===filt)&&(!q||(t.name+t.subject).includes(q)));stats();
   vis=list.map(t=>t.id);
+  [...sel].forEach(id=>{if(!T.some(t=>t.id===id))sel.delete(id)});
+  const k=vis.filter(id=>sel.has(id)).length;
+  $('#bulk').classList.toggle('show',list.length>0);
+  $('#bulk').innerHTML=`<span>المحدد: ${k} من ${list.length}</span><button data-selall>${k===list.length?'إلغاء تحديد الكل':'تحديد الكل'}</button>`
+    +Object.keys(CURR).map(c=>`<button class="go" data-bulk="${c}" ${k?'':'disabled'}>نقل إلى ${CURR[c].n}</button>`).join('');
   const badge=t=>(!curr&&CURR[t.curr])?`<span class="exp">${CURR[t.curr].n}</span>`:'';
-  $('#grid').innerHTML=list.map(t=>`<article class="card"><div class="photo">${ph(t)}</div><h3>${esc(t.name)}</h3><span class="pill">${esc(t.subject)}</span>${badge(t)}${t.exp?`<span class="exp">خبرة ${esc(t.exp)} سنة</span>`:""}<p class="snip">${esc(t.bio)||'لا توجد نبذة بعد.'}</p><button class="btn ghost" data-v="${t.id}">عرض النبذة</button><div class="tools"><button data-m="${t.id}:-1" aria-label="أعلى">↑</button><button data-m="${t.id}:1" aria-label="أسفل">↓</button><button data-e="${t.id}">تعديل</button><button class="del" data-d="${t.id}">حذف</button></div></article>`).join('')
+  $('#grid').innerHTML=list.map(t=>`<article class="card ${sel.has(t.id)?'sel':''}"><button class="pick ${sel.has(t.id)?'on':''}" data-pick="${t.id}" aria-label="تحديد" aria-pressed="${sel.has(t.id)}">✓</button><div class="photo">${ph(t)}</div><h3>${esc(t.name)}</h3><span class="pill">${esc(t.subject)}</span>${badge(t)}${t.exp?`<span class="exp">خبرة ${esc(t.exp)} سنة</span>`:""}<p class="snip">${esc(t.bio)||'لا توجد نبذة بعد.'}</p><button class="btn ghost" data-v="${t.id}">عرض النبذة</button><div class="tools"><button data-m="${t.id}:-1" aria-label="أعلى">↑</button><button data-m="${t.id}:1" aria-label="أسفل">↓</button><button data-e="${t.id}">تعديل</button><button class="del" data-d="${t.id}">حذف</button></div></article>`).join('')
    +(curr?`<button class="add" data-add>+ إضافة أستاذ</button>`:'')
    +(!curr&&!q?'<div class="hint">اختر المنهج لعرض أساتذته، أو ابحث بالاسم أو المادة.</div>':list.length?'':'<div class="empty">'+(q?'لا توجد نتائج مطابقة.':'لا يوجد أساتذة في هذا المنهج حالياً.')+'</div>');
 }
@@ -363,7 +380,13 @@ function openForm(id){
 }
 document.addEventListener('click',e=>{
   const g=s=>e.target.closest(s);
-  if(g('[data-c]')){const k=g('[data-c]').dataset.c;curr=curr===k?null:k;filt='الكل';render();if(curr)$('#chips').scrollIntoView({behavior:'smooth',block:'nearest'});return}
+  if(g('[data-pick]')){const id=g('[data-pick]').dataset.pick;sel.has(id)?sel.delete(id):sel.add(id);render();return}
+  if(g('[data-selall]')){const all=vis.every(id=>sel.has(id));vis.forEach(id=>all?sel.delete(id):sel.add(id));render();return}
+  if(g('[data-bulk]')){const c=g('[data-bulk]').dataset.bulk,ids=vis.filter(id=>sel.has(id));if(!ids.length)return;
+    if(!confirm(`نقل ${ids.length} أستاذ إلى ${CURR[c].n}؟`))return;
+    const b=writeBatch(db);ids.forEach(id=>b.update(doc(db,'teachers',id),{curr:c}));
+    b.commit().then(()=>{ids.forEach(id=>sel.delete(id));toast(`تم نقل ${ids.length} إلى ${CURR[c].n} ✓`);setTimeout(()=>toast(''),2500)}).catch(fail);return}
+  if(g('[data-c]')){const k=g('[data-c]').dataset.c;curr=curr===k?null:k;filt='الكل';sel.clear();render();if(curr)$('#chips').scrollIntoView({behavior:'smooth',block:'nearest'});return}
   if(g('[data-f]')){filt=g('[data-f]').dataset.f;render();return}
   if(g('[data-v]')){const t=byId(g('[data-v]').dataset.v);$('#vPh').innerHTML=ph(t);$('#vN').textContent=t.name;$('#vS').textContent=t.subject;$('#vB').textContent=t.bio;$('#vWa').href='https://wa.me/'+WA+'?text='+encodeURIComponent('السلام عليكم، أريد الحجز مع '+t.name+' ('+t.subject+')');open($('#vOv'));return}
   if(g('[data-m]')){const[id,d]=g('[data-m]').dataset.m.split(':');const vi=vis.indexOf(id),o=vis[vi+ +d];if(o){const a=[...T],i=a.findIndex(t=>t.id==id),j=a.findIndex(t=>t.id==o);[a[i],a[j]]=[a[j],a[i]];const b=writeBatch(db);a.forEach((t,k)=>b.update(doc(db,'teachers',t.id),{order:k}));b.commit().catch(fail)}return}
