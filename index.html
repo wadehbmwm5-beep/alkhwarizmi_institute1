@@ -28,6 +28,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>الخوارزمي | كادرنا التدريسي</title>
 <meta name="description" content="تعرّف على أساتذة الخوارزمي وخبراتهم وتواصل معنا مباشرة.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="معهد الخوارزمي">
+<meta property="og:title" content="الخوارزمي | كادرنا التدريسي">
+<meta property="og:description" content="تعرّف على أساتذة الخوارزمي وخبراتهم وتواصل معنا مباشرة.">
+<meta property="og:url" content="https://alkhwarizmiinstitute.vercel.app/">
+<meta property="og:image" content="https://alkhwarizmiinstitute.vercel.app/logo.jpg">
+<meta property="og:image:secure_url" content="https://alkhwarizmiinstitute.vercel.app/logo.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="600">
+<meta property="og:image:height" content="600">
+<meta property="og:image:alt" content="شعار معهد الخوارزمي">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://alkhwarizmiinstitute.vercel.app/logo.jpg">
+<link rel="apple-touch-icon" href="/logo.jpg">
 <link rel="icon" id="fav">
 <link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -135,6 +149,12 @@ input,textarea{width:100%;margin-top:4px;padding:11px 14px;border-radius:12px;bo
 input:focus,textarea:focus{outline:none;border-color:var(--gold)}
 textarea{min-height:130px;resize:vertical}
 input[type=file]{padding:9px}
+.cks-w{font-size:.92rem;color:var(--gold-l)}
+.cks{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap}
+.cks label{flex:1;min-width:130px;display:flex;align-items:center;gap:8px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.06);color:var(--ivory);cursor:pointer}
+.cks input{width:20px;height:20px;margin:0;padding:0;accent-color:#d4af37;cursor:pointer}
+.cks label:has(input:checked){border-color:var(--gold);background:rgba(212,175,55,.16)}
+.cks-e{color:#ff9a9a;font-size:.88rem;min-height:1.2em;margin-top:4px}
 
 .stats{max-width:820px;margin:0 auto;padding:0 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
 .stat{text-align:center;padding:16px 8px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.03)}
@@ -267,7 +287,7 @@ body.edit .pdel{display:block}
   <h2 id="fT">إضافة أستاذ</h2><p>املأ البيانات ثم احفظ.</p>
   <form id="form">
     <label>الاسم<input id="fN" required placeholder="أ. محمد الجبوري"></label>
-    <label>المنهج<select id="fC" required><option value="region">منهج الإقليم</option><option value="center">منهج المركز</option></select></label>
+    <div class="cks-w">المنهج (تكدر تختار الاثنين)<div class="cks"><label><input type="checkbox" id="fCr" value="region">منهج الإقليم</label><label><input type="checkbox" id="fCc" value="center">منهج المركز</label></div><div id="fCe" class="cks-e"></div></div>
     <label>المادة<input id="fS" required placeholder="الرياضيات"></label>
     <label>سنوات الخبرة (اختياري)<input id="fX" type="number" min="0" max="60" placeholder="10"></label>
     <label>نبذة عن الأستاذ<textarea id="fB" placeholder="الخبرة، الشهادات، أسلوب التدريس..."></textarea></label>
@@ -338,18 +358,20 @@ onSnapshot(col,snap=>{T=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a
   err=>{console.error(err);loaded=true;$('#grid').innerHTML='<div class="empty">تعذّر تحميل الأساتذة.</div>'});
 let filt='الكل', editId=null, curr=null, vis=[], sel=new Set();
 const CURR={region:{n:'منهج الإقليم',d:''},center:{n:'منهج المركز',d:' '}};
+const cl=t=>t.curr==='both'?Object.keys(CURR):Array.isArray(t.curr)?t.curr.filter(k=>CURR[k]):CURR[t.curr]?[t.curr]:[];
+const inC=(t,k)=>cl(t).includes(k);
 
 const ph=t=>t.photo?`<img src="${t.photo}" alt="${esc(t.name)}">`:`<div class="ph">${esc(t.name.replace(/^أ\.\s*/,'').charAt(0))}</div>`;
 function render(){renderInst();
   if(!loaded){$('#grid').innerHTML='<div class="empty">جارٍ التحميل...</div>';return}
   const ed=document.body.classList.contains('edit');
-  const un=T.filter(t=>!CURR[t.curr]);
+  const un=T.filter(t=>!cl(t).length);
   if(curr==='none'&&!un.length)curr=null;
   const keys=[...Object.keys(CURR),...(ed&&un.length?['none']:[])];
-  $('#currs').innerHTML=keys.map(k=>{const n=k==='none'?un.length:T.filter(t=>t.curr===k).length,c=CURR[k]||{n:'غير مصنّف',d:'أساتذة بدون منهج — صنّفهم من زر تعديل'};
+  $('#currs').innerHTML=keys.map(k=>{const n=k==='none'?un.length:T.filter(t=>inC(t,k)).length,c=CURR[k]||{n:'غير مصنّف',d:'أساتذة بدون منهج — صنّفهم من زر تعديل'};
     return `<button class="curr ${k===curr?'on':''}" data-c="${k}" aria-pressed="${k===curr}"><b>${c.n}</b><small>${c.d}</small><em>${n} أستاذ</em></button>`}).join('');
   const q=($('#q').value||'').trim();
-  const base=curr==='none'?un:curr?T.filter(t=>t.curr===curr):(q?T:[]);
+  const base=curr==='none'?un:curr?T.filter(t=>inC(t,curr)):(q?T:[]);
   const subs=base.length?['الكل',...new Set(base.map(t=>t.subject))]:[];
   if(!subs.includes(filt)) filt='الكل';
   $('#chips').innerHTML=subs.map(s=>`<button class="chip ${s===filt?'on':''}" data-f="${esc(s)}">${esc(s)}</button>`).join('');
@@ -359,8 +381,8 @@ function render(){renderInst();
   const k=vis.filter(id=>sel.has(id)).length;
   $('#bulk').classList.toggle('show',list.length>0);
   $('#bulk').innerHTML=`<span>المحدد: ${k} من ${list.length}</span><button data-selall>${k===list.length?'إلغاء تحديد الكل':'تحديد الكل'}</button>`
-    +Object.keys(CURR).map(c=>`<button class="go" data-bulk="${c}" ${k?'':'disabled'}>نقل إلى ${CURR[c].n}</button>`).join('');
-  const badge=t=>(!curr&&CURR[t.curr])?`<span class="exp">${CURR[t.curr].n}</span>`:'';
+    +[...Object.keys(CURR),'both'].map(c=>`<button class="go" data-bulk="${c}" ${k?'':'disabled'}>${c==='both'?'إضافة إلى المنهجين':'نقل إلى '+CURR[c].n}</button>`).join('');
+  const badge=t=>{const c=cl(t);return c.length>1?'<span class="exp">منهج الإقليم + المركز</span>':(!curr&&c.length)?`<span class="exp">${CURR[c[0]].n}</span>`:''};
   $('#grid').innerHTML=list.map(t=>`<article class="card ${sel.has(t.id)?'sel':''}"><button class="pick ${sel.has(t.id)?'on':''}" data-pick="${t.id}" aria-label="تحديد" aria-pressed="${sel.has(t.id)}">✓</button><div class="photo">${ph(t)}</div><h3>${esc(t.name)}</h3><span class="pill">${esc(t.subject)}</span>${badge(t)}${t.exp?`<span class="exp">خبرة ${esc(t.exp)} سنة</span>`:""}<p class="snip">${esc(t.bio)||'لا توجد نبذة بعد.'}</p><button class="btn ghost" data-v="${t.id}">عرض النبذة</button><div class="tools"><button data-m="${t.id}:-1" aria-label="أعلى">↑</button><button data-m="${t.id}:1" aria-label="أسفل">↓</button><button data-e="${t.id}">تعديل</button><button class="del" data-d="${t.id}">حذف</button></div></article>`).join('')
    +(curr?`<button class="add" data-add>+ إضافة أستاذ</button>`:'')
    +(!curr&&!q?'<div class="hint">اختر المنهج لعرض أساتذته، أو ابحث بالاسم أو المادة.</div>':list.length?'':'<div class="empty">'+(q?'لا توجد نتائج مطابقة.':'لا يوجد أساتذة في هذا المنهج حالياً.')+'</div>');
@@ -373,7 +395,7 @@ const open=el=>{closeAll();el.classList.add('open')};
 const byId=id=>T.find(t=>t.id==id);
 function openForm(id){
   editId=id; const t=id?byId(id):{name:'',subject:'',bio:''};
-  $('#fC').value=CURR[t.curr]?t.curr:(CURR[curr]?curr:'region');
+  {const c=cl(t),d=c.length?c:[CURR[curr]?curr:'region'];$('#fCr').checked=d.includes('region');$('#fCc').checked=d.includes('center');$('#fCe').textContent=''}
   $('#fT').textContent=id?'تعديل بيانات الأستاذ':'إضافة أستاذ';
   $('#fN').value=t.name;$('#fX').value=t.exp||'';$('#fS').value=t.subject;$('#fB').value=t.bio;$('#fP').value='';
   open($('#fOv'));
@@ -383,9 +405,10 @@ document.addEventListener('click',e=>{
   if(g('[data-pick]')){const id=g('[data-pick]').dataset.pick;sel.has(id)?sel.delete(id):sel.add(id);render();return}
   if(g('[data-selall]')){const all=vis.every(id=>sel.has(id));vis.forEach(id=>all?sel.delete(id):sel.add(id));render();return}
   if(g('[data-bulk]')){const c=g('[data-bulk]').dataset.bulk,ids=vis.filter(id=>sel.has(id));if(!ids.length)return;
-    if(!confirm(`نقل ${ids.length} أستاذ إلى ${CURR[c].n}؟`))return;
+    const cn=c==='both'?'المنهجين (الإقليم + المركز)':CURR[c].n;
+    if(!confirm(`نقل ${ids.length} أستاذ إلى ${cn}؟`))return;
     const b=writeBatch(db);ids.forEach(id=>b.update(doc(db,'teachers',id),{curr:c}));
-    b.commit().then(()=>{ids.forEach(id=>sel.delete(id));toast(`تم نقل ${ids.length} إلى ${CURR[c].n} ✓`);setTimeout(()=>toast(''),2500)}).catch(fail);return}
+    b.commit().then(()=>{ids.forEach(id=>sel.delete(id));toast(`تم نقل ${ids.length} إلى ${cn} ✓`);setTimeout(()=>toast(''),2500)}).catch(fail);return}
   if(g('[data-c]')){const k=g('[data-c]').dataset.c;curr=curr===k?null:k;filt='الكل';sel.clear();render();if(curr)$('#chips').scrollIntoView({behavior:'smooth',block:'nearest'});return}
   if(g('[data-f]')){filt=g('[data-f]').dataset.f;render();return}
   if(g('[data-v]')){const t=byId(g('[data-v]').dataset.v);$('#vPh').innerHTML=ph(t);$('#vN').textContent=t.name;$('#vS').textContent=t.subject;$('#vB').textContent=t.bio;$('#vWa').href='https://wa.me/'+WA+'?text='+encodeURIComponent('السلام عليكم، أريد الحجز مع '+t.name+' ('+t.subject+')');open($('#vOv'));return}
@@ -400,9 +423,10 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll()});
 
 function shrink(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const w=480,h=Math.round(w*im.height/im.width),c=document.createElement('canvas');
   const s=Math.min(1,w/im.width);c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.85))};im.src=r.result};r.readAsDataURL(file)})}
-const fv=()=>({name:$('#fN').value.trim(),subject:$('#fS').value.trim(),exp:$('#fX').value.trim(),bio:$('#fB').value.trim(),curr:$('#fC').value});
+const fv=()=>({name:$('#fN').value.trim(),subject:$('#fS').value.trim(),exp:$('#fX').value.trim(),bio:$('#fB').value.trim(),curr:fCv()});
+const fCv=()=>{const r=$('#fCr').checked,c=$('#fCc').checked;return r&&c?'both':r?'region':c?'center':''};
 $('#form').addEventListener('submit',async e=>{
-  e.preventDefault();const btn=e.submitter;btn.disabled=true;
+  e.preventDefault();if(!fCv()){$('#fCe').textContent='اختر منهج واحد على الأقل';return}$('#fCe').textContent='';const btn=e.submitter;btn.disabled=true;
   try{const f=$('#fP').files[0];const data=fv();if(f)data.photo=await shrink(f);
     if(editId)await updateDoc(doc(db,'teachers',editId),data);
     else{data.order=T.length?Math.max(...T.map(t=>t.order??0))+1:0;await addDoc(col,data)}
